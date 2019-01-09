@@ -8,3 +8,34 @@ services:
     volumes:
       - ./gateway:/usr/src/app
       - /usr/src/app/node_modules
+    links:
+      - db-0
+      - db-1
+      - db-2
+
+  db-0:
+    container_name: db-0
+    build: ./db
+    expose:
+      - "8081"
+    volumes:
+      - ./db:/usr/src/app
+      - /usr/src/app/node_modules
+
+  db-1:
+    container_name: db-1
+    build: ./db
+    expose:
+      - "8081"
+    volumes:
+      - ./db:/usr/src/app
+      - /usr/src/app/node_modules
+
+  db-2:
+    container_name: db-2
+    build: ./db
+    expose:
+      - "8081"
+    volumes:
+      - ./db:/usr/src/app
+      - /usr/src/app/node_modules
