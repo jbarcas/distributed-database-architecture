@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const bodyParser = require("body-parser");
+const rocksdb = require("rocksdb");
 
 const logger = require("./logger");
 const user = require("./routes/user");
@@ -13,6 +14,16 @@ app.use(logger.expressMiddleware);
 
 // Parse incoming request bodies
 app.use(bodyParser.json());
+
+// Crate RocksDB instance
+const db = rocksdb("/tmp");
+
+// Open a databse connection
+db.open(err => {
+  if (err) {
+    console.log("Error opening RocksDb database", err);
+  }
+});
 
 // Route definitions
 app.use("/api/users", user);
