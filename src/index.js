@@ -17,6 +17,11 @@ app.get("/*", (req, res) => {
   res.status(200).sendFile(path.join(__dirname, "index.html"));
 });
 
+// Error handling
+app.use(function(error, req, res, next) {
+  res.status(error.status || 500).json({ message: error.message });
+});
+
 // Starts server listening on suitable port (default: 8080)
 const port = process.env.PORT || 8080;
 app.listen(port, console.log(`Running on localhost:${port}`));

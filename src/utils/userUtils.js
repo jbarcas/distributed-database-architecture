@@ -1,4 +1,5 @@
 const joi = require("joi");
+const InvalidRequestError = require("../errors/InvalidRequestError");
 
 const userSchema = joi.object().keys({
   id: joi.string(),
@@ -7,13 +8,13 @@ const userSchema = joi.object().keys({
   group: joi.number().integer()
 });
 
-const validateUserSchema = (user) => {
+const validateUserSchema = user => {
   const validateUser = joi.validate(user, userSchema);
   if (validateUser.error) {
-    throw validateUser.error;
+    throw new InvalidRequestError();
   }
 };
 
 module.exports = {
   validateUserSchema
-}
+};
