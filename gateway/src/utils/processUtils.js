@@ -1,4 +1,5 @@
 const DB_N = process.env.DB_N || 3;
+const DB_PORT = process.env.DB_PORT || 8081;
 
 const hashCode = uuid => {
   let hash = 0,
@@ -21,12 +22,12 @@ const getDbProcess = uuid => {
 
 const getEndpoint = uuid => {
   const dbProcess = getDbProcess(uuid);
-  return `http://db-${dbProcess}:8081`;
+  return `http://db-${dbProcess}:${DB_PORT}/api/users`;
 };
 
 const getRedundantEndpoint = uuid => {
   const dbProcess = (getDbProcess(uuid) + 1) % DB_N;
-  return `http://db-${dbProcess}:8081`;
+  return `http://db-${dbProcess}:${DB_PORT}/api/users`;
 };
 
 module.exports = {

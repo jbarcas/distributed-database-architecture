@@ -29,4 +29,4 @@ app.use((error, req, res, next) => {
 
 // Starts server listening on suitable port (default: 8080)
 const port = process.env.PORT || 8080;
-app.listen(port, logger.info(`Running on localhost:${port}`));
+app.listen(port, logger.info(`API gateway running on localhost:${port}`));

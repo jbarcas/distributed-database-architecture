@@ -1,5 +1,4 @@
 const express = require("express");
-const path = require("path");
 const bodyParser = require("body-parser");
 const rocksdb = require("rocksdb");
 
@@ -31,10 +30,6 @@ db.open(err => {
 // Route definitions
 app.use("/api/users", user);
 
-app.get("/*", (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, "index.html"));
-});
-
 // Error handling
 app.use((error, req, res, next) => {
   logger.error(error.stack);
@@ -43,4 +38,4 @@ app.use((error, req, res, next) => {
 
 // Starts server listening on suitable port
 const port = process.env.PORT || 8081;
-app.listen(port, logger.info(`Running on localhost:${port}`));
+app.listen(port, logger.info(`DB process running on localhost:${port}`));
