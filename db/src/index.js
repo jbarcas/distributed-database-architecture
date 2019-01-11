@@ -15,8 +15,11 @@ app.use(logger.expressMiddleware);
 // Parse incoming request bodies
 app.use(bodyParser.json());
 
-// Crate RocksDB instance
-const db = rocksdb("/tmp");
+// Create RocksDB instance
+const db = rocksdb("/tmp/userdb");
+
+// Use db instance in routes
+app.locals.db = db;
 
 // Open a databse connection
 db.open(err => {

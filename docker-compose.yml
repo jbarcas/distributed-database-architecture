@@ -3,6 +3,8 @@ services:
   gateway:
     container_name: gateway
     build: ./gateway
+    environment:
+      - DB_N=3
     ports:
       - "8080:8080"
     volumes:

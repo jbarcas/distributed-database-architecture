@@ -10,8 +10,8 @@ const userSchema = joi.object().keys({
 
 const validateUserSchema = user => {
   const validateUser = joi.validate(user, userSchema);
-  if (validateUser.error) {
-    throw new InvalidRequestError();
+  if (validateUser.error) {    
+    throw new InvalidRequestError(`Malformed payload: ${validateUser.error}`);
   }
 };
 
