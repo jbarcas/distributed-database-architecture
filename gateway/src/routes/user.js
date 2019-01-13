@@ -27,16 +27,15 @@ router.post("/", (req, res) => {
 });
 
 router.put("/", (req, res) => {
-  const user = req.body;
-
   // validate input
   userUtils.validateUserSchema(req.body);
 
   // Update the user in 2 db processes
+  const user = req.body;
   db.users
     .update(user)
     .then(user => res.status(200).json(user))
-    .catch(err => res.status(err.status).json(err));
+    .catch(err => res.status(err.status).json({ message: err.message }));
 });
 
 router.delete("/:userId", (req, res) => {

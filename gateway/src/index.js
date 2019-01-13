@@ -1,7 +1,6 @@
 const express = require("express");
 const path = require("path");
 const bodyParser = require("body-parser");
-
 const logger = require("./logger");
 const user = require("./routes/user");
 

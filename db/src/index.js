@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const rocksdb = require("rocksdb");
-
 const logger = require("./logger");
 const user = require("./routes/user");
 
@@ -23,7 +22,7 @@ app.locals.db = db;
 // Open a databse connection
 db.open(err => {
   if (err) {
-    console.log("Error opening RocksDb database", err);
+    logger.error("Error opening RocksDb database", err);
   }
 });
 

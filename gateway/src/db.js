@@ -1,73 +1,79 @@
 const axios = require("axios");
-
 const processUtils = require("./utils/processUtils");
 const NotFoundError = require("./errors/NotFoundError");
 const UnavailableProcessError = require("./errors/UnavailableProcessError");
 
-// The following funcions are required for concurrent creation
-const createUser = user =>
-  axios.post(`${processUtils.getEndpoint(user.id)}`, user);
-const createRedundantUser = user =>
-  axios.post(`${processUtils.getRedundantEndpoint(user.id)}`, user);
-
-// The following funcions are required for concurrent update
-const updateUser = user =>
-  axios.put(`${processUtils.getEndpoint(user.id)}`, user);
-const updateRedundantUser = user =>
-  axios.put(`${processUtils.getRedundantEndpoint(user.id)}`, user);
-
-// The following funcions are required for concurrent deletion
-const deleteUser = userId =>
-  axios.delete(`${processUtils.getEndpoint(userId)}/${userId}`);
-const deleteRedundantUser = userId =>
-  axios.delete(`${processUtils.getRedundantEndpoint(userId)}/${userId}`);
-
-// Store, concurrently, the user in two database processes
 const users = {
-  create: user =>
-    axios
-      .all([createUser(user), createRedundantUser(user)])
-      .then(
-        axios.spread((user, redundantUser) => {
-          return user.data || redundantUser.data;
-        })
-      )
-      .catch(err => {
+  /**
+   * Creates an entity into two nodes: if the master node is online and the
+   * slave is not, then it only stores the record on the master node.
+   */
+  create: user => {
+    axios.post(`${processUtils.getRedundantEndpoint(user.id)}`, user);
+    return axios
+      .post(`${processUtils.getEndpoint(user.id)}`, user)
+      .then(user => user.data)
+      .catch(() => {
         throw new UnavailableProcessError();
-      }),
+      });
+  },
 
+  /**
+   * Read an entity from RocksDB processes. It tries to read from the master node,
+   * if it is offline, then tries to read from slave node. If both of them are
+   * offline then throws an 503 error (Service Unavailable).
+   */
   get: userId =>
     axios
       .get(`${processUtils.getEndpoint(userId)}/${userId}`)
       .then(user => user.data)
-      .catch(() =>
+      .catch(err =>
         axios
           .get(`${processUtils.getRedundantEndpoint(userId)}/${userId}`)
           .then(user => user.data)
-          .catch(error => {
-            throw new NotFoundError();
+          .catch(err => {
+            if (err.errno === "ENOTFOUND") {
+              throw new UnavailableProcessError();
+            } else {
+              throw new NotFoundError();
+            }
           })
       ),
 
-  update: user =>
-    axios
-      .all([updateUser(user), updateRedundantUser(user)])
-      .then(
-        axios.spread((user, redundantUser) => {
-          return user.data || redundantUser.data;
-        })
-      )
+  /**
+   * Updates an entity into two nodes: if the master node is online and the
+   * slave is not, then it only updates the record on the master node.
+   */
+  update: user => {
+    axios.put(`${processUtils.getRedundantEndpoint(user.id)}`, user);
+    return axios
+      .put(`${processUtils.getEndpoint(user.id)}`, user)
+      .then(user => user.data)
       .catch(err => {
-        throw new UnavailableProcessError();
-      }),
+        if (err.errno === "ENOTFOUND") {
+          throw new UnavailableProcessError();
+        } else {
+          throw new NotFoundError();
+        }
+      });
+  },
 
-  delete: userId =>
-    axios
-      .all([deleteUser(userId), deleteRedundantUser(userId)])
-      .then(() => {})
+  /**
+   * Deletes an entity into two nodes: if the master node is online and the
+   * slave is not, then it only deletes the record on the master node.
+   */
+  delete: userId => {
+    axios.delete(`${processUtils.getRedundantEndpoint(userId)}/${userId}`);
+    return axios
+      .delete(`${processUtils.getEndpoint(userId)}/${userId}`)
       .catch(err => {
-        throw new UnavailableProcessError();
-      })
+        if (err.errno === "ENOTFOUND") {
+          throw new UnavailableProcessError();
+        } else {
+          throw new NotFoundError();
+        }
+      });
+  }
 };
 
 module.exports = {
