@@ -2,6 +2,17 @@ const axios = require("axios");
 const processUtils = require("./utils/processUtils");
 const NotFoundError = require("./errors/NotFoundError");
 const UnavailableProcessError = require("./errors/UnavailableProcessError");
+const DB_N = process.env.DB_N || 3;
+const DB_PORT = process.env.DB_PORT || 8081;
+
+const getRequests = () => {
+  requests = [];
+  for (let i = 0; i < DB_N; i++) {
+    const request = axios.get(`http://db-${i}:${DB_PORT}/api/users/count`);
+    requests.push(request);
+  }
+  return requests;
+};
 
 const users = {
   /**
@@ -73,7 +84,23 @@ const users = {
           throw new NotFoundError();
         }
       });
-  }
+  },
+
+  count: () =>
+    axios
+      .all(getRequests())
+      .then(
+        axios.spread((...responses) => {
+          let count = 0;
+          for (const response of responses) {
+            count += response.data.count;
+          }
+          return count / 2;
+        })
+      )
+      .catch(err => {
+        console.log(err);
+      })
 };
 
 module.exports = {

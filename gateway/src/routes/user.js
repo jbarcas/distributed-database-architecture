@@ -5,6 +5,13 @@ const db = require("../db");
 
 const router = express.Router();
 
+router.get("/count", (req, res) => {
+  db.users
+    .count()
+    .then(count => res.status(200).json({ count }))
+    .catch(err => console.log(err));
+});
+
 router.get("/:userId", (req, res) => {
   const userId = req.params.userId;
   db.users

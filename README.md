@@ -22,6 +22,10 @@ DELETE /api/users/{userID}   (DELETEs an user)
 ```
 There is a schema validation on `User`.
 
+Additional features:
+- Distributed COUNT operation (GET /api/users/count) skipping duplicates.
+- Distributed LIST opertaion (GET /api/users?offset=10&limit=30) that supports pagination.
+
 ## Packaging / Orchestration engine
 
 Docker - [Docker Compose](https://docs.docker.com/compose/)

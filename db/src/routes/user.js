@@ -1,7 +1,22 @@
 const express = require("express");
+const path = require("path");
+const { exec } = require("child_process");
 const logger = require("../logger");
 
 const router = express.Router();
+
+router.get("/count", (req, res) => {
+  exec(
+    path.join(__dirname, "..", "scripts", "count.sh"),
+    (err, stdout, stderr) => {
+      if (err) {
+        console.log(err);
+        return;
+      }
+      res.status(200).json({ count: parseInt(stdout) });
+    }
+  );
+});
 
 router.get("/:userId", (req, res) => {
   const db = req.app.locals.db;
