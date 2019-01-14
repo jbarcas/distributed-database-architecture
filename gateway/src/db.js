@@ -2,6 +2,8 @@ const axios = require("axios");
 const processUtils = require("./utils/processUtils");
 const NotFoundError = require("./errors/NotFoundError");
 const UnavailableProcessError = require("./errors/UnavailableProcessError");
+const logger = require("./logger");
+
 const DB_N = process.env.DB_N || 3;
 const DB_PORT = process.env.DB_PORT || 8081;
 
@@ -16,23 +18,28 @@ const getRequests = () => {
 
 const users = {
   /**
-   * Creates an entity into two nodes: if the master node is online and the
-   * slave is not, then it only stores the record on the master node.
+   * Creates an entity into two nodes:
+   * - if the primary node is UP: it saves the record on it and tries to save
+   *   the record on secondary node.
+   * - if the primary node is DOWN: the method return a 503 (Serive Unavailable)
    */
-  create: user => {
-    axios.post(`${processUtils.getRedundantEndpoint(user.id)}`, user);
-    return axios
+  create: user =>
+    axios
       .post(`${processUtils.getEndpoint(user.id)}`, user)
-      .then(user => user.data)
-      .catch(() => {
+      .then(response => {
+        axios
+          .post(`${processUtils.getRedundantEndpoint(user.id)}`, user)
+          .catch(err => logger.warn(err.message));
+        return response.data;
+      })
+      .catch(err => {
         throw new UnavailableProcessError();
-      });
-  },
+      }),
 
   /**
-   * Read an entity from RocksDB processes. It tries to read from the master node,
-   * if it is offline, then tries to read from slave node. If both of them are
-   * offline then throws an 503 error (Service Unavailable).
+   * Read an entity from RocksDB processes. It tries to read from the primary node,
+   * if it is down, then tries to read from secondary node. If both of them are
+   * down then throws an 503 error (Service Unavailable).
    */
   get: userId =>
     axios
@@ -52,40 +59,50 @@ const users = {
       ),
 
   /**
-   * Updates an entity into two nodes: if the master node is online and the
-   * slave is not, then it only updates the record on the master node.
+   * Updates an entity into two nodes:
+   * - if the primary node is UP: it updates the record on it and tries to update
+   *   the record on secondary node.
+   * - if the primary node is DOWN: the method return a 503 (Serive Unavailable)
    */
-  update: user => {
-    axios.put(`${processUtils.getRedundantEndpoint(user.id)}`, user);
-    return axios
+  update: user =>
+    axios
       .put(`${processUtils.getEndpoint(user.id)}`, user)
-      .then(user => user.data)
+      .then(response => {
+        axios
+          .put(`${processUtils.getRedundantEndpoint(user.id)}`, user)
+          .catch(err => logger.warn(err.message));
+        return response.data;
+      })
       .catch(err => {
         if (err.errno === "ENOTFOUND") {
           throw new UnavailableProcessError();
         } else {
           throw new NotFoundError();
         }
-      });
-  },
+      }),
 
   /**
-   * Deletes an entity into two nodes: if the master node is online and the
-   * slave is not, then it only deletes the record on the master node.
+   * Deletes an entity in two nodes:
+   * - if the primary node is UP: it deletes the record on it and tries to delete
+   *   the record on the secondary node.
+   * - if the primary node is DOWN: the method return a 503 (Serive Unavailable)
    */
-  delete: userId => {
-    axios.delete(`${processUtils.getRedundantEndpoint(userId)}/${userId}`);
-    return axios
+  delete: userId =>
+    axios
       .delete(`${processUtils.getEndpoint(userId)}/${userId}`)
+      .then(() => {
+        axios
+          .delete(`${processUtils.getRedundantEndpoint(userId)}/${userId}`)
+          .catch(err => logger.warn(err.message));
+        return;
+      })
       .catch(err => {
-        if (err.errno === "ENOTFOUND") {
-          throw new UnavailableProcessError();
-        } else {
-          throw new NotFoundError();
-        }
-      });
-  },
+        throw new UnavailableProcessError();
+      }),
 
+  /**
+   * Counts the number of entities in the usersdb database
+   */
   count: () =>
     axios
       .all(getRequests())
@@ -99,7 +116,8 @@ const users = {
         })
       )
       .catch(err => {
-        console.log(err);
+        logger.error(err.message);
+        throw new UnavailableProcessError();
       })
 };
 

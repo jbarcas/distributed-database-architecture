@@ -9,7 +9,7 @@ router.get("/count", (req, res) => {
   db.users
     .count()
     .then(count => res.status(200).json({ count }))
-    .catch(err => console.log(err));
+    .catch(err => res.status(err.status).json({ message: err.message }));
 });
 
 router.get("/:userId", (req, res) => {
