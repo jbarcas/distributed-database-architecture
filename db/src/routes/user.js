@@ -2,8 +2,14 @@ const express = require("express");
 const path = require("path");
 const { exec } = require("child_process");
 const logger = require("../logger");
+const { db } = require("../utils/rocksdbUtils");
 
 const router = express.Router();
+
+const getRocksdb = value => {
+  const isRedundant = value.toLowerCase() == "true" ? true : false;
+  return isRedundant ? db.secondary : db.primary;
+};
 
 router.get("/count", (req, res) => {
   exec(
@@ -13,16 +19,16 @@ router.get("/count", (req, res) => {
         console.log(err);
         return;
       }
+      console.log("stdout", stdout);
       res.status(200).json({ count: parseInt(stdout) });
     }
   );
 });
 
 router.get("/:userId", (req, res) => {
-  const db = req.app.locals.db;
   const userId = req.params.userId;
-
-  db.get(userId, (err, user) => {
+  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb.get(userId, (err, user) => {
     if (err) {
       logger.error(`RocksDB: error while reading user ${userId}: ${err}`);
       res.status(404).json({ error: err.toString() });
@@ -34,9 +40,9 @@ router.get("/:userId", (req, res) => {
 });
 
 router.post("/", (req, res) => {
-  const db = req.app.locals.db;
   const user = req.body;
-  db.put(user.id, Buffer.from(JSON.stringify(user)), err => {
+  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb.put(user.id, Buffer.from(JSON.stringify(user)), err => {
     if (err) {
       logger.error(`RocksDB: error while creating user: ${err}`);
       res.status(404).json({ error: err.toString() });
@@ -48,16 +54,16 @@ router.post("/", (req, res) => {
 });
 
 router.put("/", (req, res) => {
-  const db = req.app.locals.db;
   const user = req.body;
-  db.get(user.id, (err, user) => {
+  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb.get(user.id, (err, user) => {
     if (err) {
       logger.error(
         `RocksDB: error while updating, user does not exist: ${err}`
       );
       res.status(404).json({ error: err.toString() });
     } else {
-      db.put(
+      rocksdb.put(
         JSON.parse(user).id,
         Buffer.from(JSON.stringify(req.body)),
         err => {
@@ -77,9 +83,9 @@ router.put("/", (req, res) => {
 });
 
 router.delete("/:userId", (req, res) => {
-  const db = req.app.locals.db;
   const userId = req.params.userId;
-  db.del(userId, err => {
+  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb.del(userId, err => {
     if (err) {
       logger.error(`RocksDB: error while deleting user: ${err}`);
       res.status(404).json({ error: err.toString() });

@@ -9,11 +9,16 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY yarn.lock ./
 
+ENV DB_FOLDER=/tmp/userdb
+ENV DB_PRIMARY=${DB_FOLDER}/primary
+ENV DB_SECONDARY=${DB_FOLDER}/secondary
+
 RUN yarn install
 # If you are building your code for production
 # RUN npm install --only=production
 
-RUN cd /opt && \
+RUN mkdir ${DB_FOLDER} && \
+    cd /opt && \
     git clone https://github.com/facebook/rocksdb.git && \
     cd rocksdb && \
     git checkout tags/v5.18.3 && \

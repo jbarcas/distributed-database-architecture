@@ -14,20 +14,37 @@ const hashCode = uuid => {
   return hash;
 };
 
-const getDbProcess = uuid => {
+/**
+ * Returns the db process a uuid belongs to.
+ */
+const getDbProcess = user => {
+  const uuid = typeof user === "object" ? user.id : user;
   const hash = Math.abs(hashCode(uuid));
   const dbProcess = hash % DB_N;
   return dbProcess;
 };
 
-const getEndpoint = uuid => {
-  const dbProcess = getDbProcess(uuid);
-  return `http://db-${dbProcess}:${DB_PORT}/api/users`;
+const getUrl = (user, dbProcess) => {
+  const protocol = "http";
+  const hostname = `db-${dbProcess}`;
+  const port = DB_PORT;
+  let pathname = "api/users";
+  if (typeof user === "string") {
+    pathname = pathname.concat(`/${user}`);
+  }
+  return `${protocol}://${hostname}:${port}/${pathname}`;
 };
 
-const getRedundantEndpoint = uuid => {
-  const dbProcess = (getDbProcess(uuid) + 1) % DB_N;
-  return `http://db-${dbProcess}:${DB_PORT}/api/users`;
+const getEndpoint = user => {
+  const dbProcess = getDbProcess(user);
+  const url = getUrl(user, dbProcess);
+  return url.concat("?isRedundant=false");
+};
+
+const getRedundantEndpoint = user => {
+  const dbProcess = (getDbProcess(user) + 1) % DB_N;
+  const url = getUrl(user, dbProcess);
+  return url.concat("?isRedundant=true");
 };
 
 module.exports = {

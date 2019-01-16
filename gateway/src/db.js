@@ -25,10 +25,10 @@ const users = {
    */
   create: user =>
     axios
-      .post(`${processUtils.getEndpoint(user.id)}`, user)
+      .post(`${processUtils.getEndpoint(user)}`, user)
       .then(response => {
         axios
-          .post(`${processUtils.getRedundantEndpoint(user.id)}`, user)
+          .post(`${processUtils.getRedundantEndpoint(user)}`, user)
           .catch(err => logger.warn(err.message));
         return response.data;
       })
@@ -43,11 +43,11 @@ const users = {
    */
   get: userId =>
     axios
-      .get(`${processUtils.getEndpoint(userId)}/${userId}`)
+      .get(`${processUtils.getEndpoint(userId)}`)
       .then(user => user.data)
       .catch(err =>
         axios
-          .get(`${processUtils.getRedundantEndpoint(userId)}/${userId}`)
+          .get(`${processUtils.getRedundantEndpoint(userId)}`)
           .then(user => user.data)
           .catch(err => {
             if (err.errno === "ENOTFOUND") {
@@ -66,10 +66,10 @@ const users = {
    */
   update: user =>
     axios
-      .put(`${processUtils.getEndpoint(user.id)}`, user)
+      .put(`${processUtils.getEndpoint(user)}`, user)
       .then(response => {
         axios
-          .put(`${processUtils.getRedundantEndpoint(user.id)}`, user)
+          .put(`${processUtils.getRedundantEndpoint(user)}`, user)
           .catch(err => logger.warn(err.message));
         return response.data;
       })
@@ -89,10 +89,10 @@ const users = {
    */
   delete: userId =>
     axios
-      .delete(`${processUtils.getEndpoint(userId)}/${userId}`)
+      .delete(`${processUtils.getEndpoint(userId)}`)
       .then(() => {
         axios
-          .delete(`${processUtils.getRedundantEndpoint(userId)}/${userId}`)
+          .delete(`${processUtils.getRedundantEndpoint(userId)}`)
           .catch(err => logger.warn(err.message));
         return;
       })
@@ -112,7 +112,7 @@ const users = {
           for (const response of responses) {
             count += response.data.count;
           }
-          return count / 2;
+          return count;
         })
       )
       .catch(err => {
