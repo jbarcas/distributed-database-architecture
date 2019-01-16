@@ -6,20 +6,17 @@ const { db } = require("../utils/rocksdbUtils");
 
 const router = express.Router();
 
-const getRocksdb = value => {
-  const isRedundant = value.toLowerCase() == "true" ? true : false;
-  return isRedundant ? db.secondary : db.primary;
-};
+const getRocksdb = value =>
+  value.toLowerCase() === "primary" ? db.primary : db.secondary;
 
 router.get("/count", (req, res) => {
   exec(
     path.join(__dirname, "..", "scripts", "count.sh"),
     (err, stdout, stderr) => {
       if (err) {
-        console.log(err);
+        logger.error(err);
         return;
       }
-      console.log("stdout", stdout);
       res.status(200).json({ count: parseInt(stdout) });
     }
   );
@@ -27,7 +24,7 @@ router.get("/count", (req, res) => {
 
 router.get("/:userId", (req, res) => {
   const userId = req.params.userId;
-  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb = getRocksdb(req.query.db);
   rocksdb.get(userId, (err, user) => {
     if (err) {
       logger.error(`RocksDB: error while reading user ${userId}: ${err}`);
@@ -41,7 +38,7 @@ router.get("/:userId", (req, res) => {
 
 router.post("/", (req, res) => {
   const user = req.body;
-  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb = getRocksdb(req.query.db);
   rocksdb.put(user.id, Buffer.from(JSON.stringify(user)), err => {
     if (err) {
       logger.error(`RocksDB: error while creating user: ${err}`);
@@ -55,12 +52,10 @@ router.post("/", (req, res) => {
 
 router.put("/", (req, res) => {
   const user = req.body;
-  rocksdb = getRocksdb(req.query.isRedundant);
+  rocksdb = getRocksdb(req.query.db);
   rocksdb.get(user.id, (err, user) => {
     if (err) {
-      logger.error(
-        `RocksDB: error while updating, user does not exist: ${err}`
-      );
+      logger.error(`RocksDB: error at updating, user does not exist: ${err}`);
       res.status(404).json({ error: err.toString() });
     } else {
       rocksdb.put(
@@ -84,14 +79,21 @@ router.put("/", (req, res) => {
 
 router.delete("/:userId", (req, res) => {
   const userId = req.params.userId;
-  rocksdb = getRocksdb(req.query.isRedundant);
-  rocksdb.del(userId, err => {
+  rocksdb = getRocksdb(req.query.db);
+  rocksdb.get(userId, (err, user) => {
     if (err) {
-      logger.error(`RocksDB: error while deleting user: ${err}`);
+      logger.error(`RocksDB: error at deleting, user does not exist: ${err}`);
       res.status(404).json({ error: err.toString() });
     } else {
-      logger.info(`RocksDB: user ${userId} deleted successfully`);
-      res.status(204).send();
+      rocksdb.del(userId, err => {
+        if (err) {
+          logger.error(`RocksDB: error while deleting user: ${err}`);
+          res.status(404).json({ error: err.toString() });
+        } else {
+          logger.info(`RocksDB: user ${userId} deleted successfully`);
+          res.status(204).send();
+        }
+      });
     }
   });
 });

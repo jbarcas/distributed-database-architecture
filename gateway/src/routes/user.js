@@ -1,5 +1,5 @@
 const express = require("express");
-const uuidv1 = require("uuid/v1");
+const shortid = require("shortid");
 const userUtils = require("../utils/userUtils");
 const db = require("../db");
 
@@ -21,7 +21,7 @@ router.get("/:userId", (req, res) => {
 });
 
 router.post("/", (req, res) => {
-  const user = { id: uuidv1(), ...req.body };
+  const user = { id: shortid.generate(), ...req.body };
 
   // validate input
   userUtils.validateUserSchema(user);

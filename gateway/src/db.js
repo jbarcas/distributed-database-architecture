@@ -7,6 +7,10 @@ const logger = require("./logger");
 const DB_N = process.env.DB_N || 3;
 const DB_PORT = process.env.DB_PORT || 8081;
 
+/**
+ * Generates an array of requests necessary to query the number of entities
+ * to each of the nodes.
+ */
 const getRequests = () => {
   requests = [];
   for (let i = 0; i < DB_N; i++) {
@@ -14,6 +18,14 @@ const getRequests = () => {
     requests.push(request);
   }
   return requests;
+};
+
+const throwError = error => {
+  if (error.errno === "ENOTFOUND") {
+    throw new UnavailableProcessError();
+  } else {
+    throw new NotFoundError();
+  }
 };
 
 const users = {
@@ -25,14 +37,14 @@ const users = {
    */
   create: user =>
     axios
-      .post(`${processUtils.getEndpoint(user)}`, user)
+      .post(processUtils.getPrimaryEndpoint(user), user)
       .then(response => {
         axios
-          .post(`${processUtils.getRedundantEndpoint(user)}`, user)
+          .post(processUtils.getSecondaryEndpoint(user), user)
           .catch(err => logger.warn(err.message));
         return response.data;
       })
-      .catch(err => {
+      .catch(() => {
         throw new UnavailableProcessError();
       }),
 
@@ -43,19 +55,13 @@ const users = {
    */
   get: userId =>
     axios
-      .get(`${processUtils.getEndpoint(userId)}`)
+      .get(processUtils.getPrimaryEndpoint(userId))
       .then(user => user.data)
       .catch(err =>
         axios
-          .get(`${processUtils.getRedundantEndpoint(userId)}`)
+          .get(processUtils.getSecondaryEndpoint(userId))
           .then(user => user.data)
-          .catch(err => {
-            if (err.errno === "ENOTFOUND") {
-              throw new UnavailableProcessError();
-            } else {
-              throw new NotFoundError();
-            }
-          })
+          .catch(err => throwError(err))
       ),
 
   /**
@@ -66,20 +72,14 @@ const users = {
    */
   update: user =>
     axios
-      .put(`${processUtils.getEndpoint(user)}`, user)
+      .put(processUtils.getPrimaryEndpoint(user), user)
       .then(response => {
         axios
-          .put(`${processUtils.getRedundantEndpoint(user)}`, user)
+          .put(processUtils.getSecondaryEndpoint(user), user)
           .catch(err => logger.warn(err.message));
         return response.data;
       })
-      .catch(err => {
-        if (err.errno === "ENOTFOUND") {
-          throw new UnavailableProcessError();
-        } else {
-          throw new NotFoundError();
-        }
-      }),
+      .catch(err => throwError(err)),
 
   /**
    * Deletes an entity in two nodes:
@@ -89,16 +89,14 @@ const users = {
    */
   delete: userId =>
     axios
-      .delete(`${processUtils.getEndpoint(userId)}`)
+      .delete(processUtils.getPrimaryEndpoint(userId))
       .then(() => {
         axios
-          .delete(`${processUtils.getRedundantEndpoint(userId)}`)
+          .delete(processUtils.getSecondaryEndpoint(userId))
           .catch(err => logger.warn(err.message));
         return;
       })
-      .catch(err => {
-        throw new UnavailableProcessError();
-      }),
+      .catch(err => throwError(err)),
 
   /**
    * Counts the number of entities in the usersdb database

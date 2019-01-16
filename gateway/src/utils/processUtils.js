@@ -14,11 +14,13 @@ const hashCode = uuid => {
   return hash;
 };
 
+const isObject = variable => typeof variable === "object";
+
 /**
- * Returns the db process a uuid belongs to.
+ * Returns the db process a user belongs to.
  */
 const getDbProcess = user => {
-  const uuid = typeof user === "object" ? user.id : user;
+  const uuid = isObject(user) ? user.id : user;
   const hash = Math.abs(hashCode(uuid));
   const dbProcess = hash % DB_N;
   return dbProcess;
@@ -29,25 +31,25 @@ const getUrl = (user, dbProcess) => {
   const hostname = `db-${dbProcess}`;
   const port = DB_PORT;
   let pathname = "api/users";
-  if (typeof user === "string") {
+  if (!isObject(user)) {
     pathname = pathname.concat(`/${user}`);
   }
   return `${protocol}://${hostname}:${port}/${pathname}`;
 };
 
-const getEndpoint = user => {
+const getPrimaryEndpoint = user => {
   const dbProcess = getDbProcess(user);
   const url = getUrl(user, dbProcess);
-  return url.concat("?isRedundant=false");
+  return url.concat("?db=primary");
 };
 
-const getRedundantEndpoint = user => {
+const getSecondaryEndpoint = user => {
   const dbProcess = (getDbProcess(user) + 1) % DB_N;
   const url = getUrl(user, dbProcess);
-  return url.concat("?isRedundant=true");
+  return url.concat("?db=secondary");
 };
 
 module.exports = {
-  getEndpoint,
-  getRedundantEndpoint
+  getPrimaryEndpoint,
+  getSecondaryEndpoint
 };
