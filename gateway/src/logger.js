@@ -29,7 +29,10 @@ const config = {
 
 let logger = createLogger({
   levels: config.levels,
-  level: process.env.LOG_LEVEL || "info",
+  level:
+    process.env.NODE_ENV !== "test"
+      ? process.env.LOG_LEVEL || "info"
+      : config.levels.silly,
   format: format.combine(format.colorize(), format.simple()),
   transports: [new transports.Console()],
   exitOnError: false

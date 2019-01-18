@@ -1,5 +1,4 @@
 const express = require("express");
-const path = require("path");
 const bodyParser = require("body-parser");
 const logger = require("./logger");
 const user = require("./routes/user");
@@ -16,10 +15,6 @@ app.use(bodyParser.json());
 // Route definitions
 app.use("/api/users", user);
 
-app.get("/*", (req, res) => {
-  res.status(200).sendFile(path.join(__dirname, "index.html"));
-});
-
 // Error handling
 app.use((error, req, res, next) => {
   logger.error(error.stack);
@@ -28,4 +23,8 @@ app.use((error, req, res, next) => {
 
 // Starts server listening on suitable port (default: 8080)
 const port = process.env.PORT || 8080;
-app.listen(port, logger.info(`API gateway running on localhost:${port}`));
+if (!module.parent) {
+  app.listen(port, logger.info(`API gateway running on localhost:${port}`));
+}
+
+module.exports = app;
