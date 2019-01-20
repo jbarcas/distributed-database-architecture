@@ -9,21 +9,16 @@ const db = {
   secondary: rocksdb(dbSecondary)
 };
 
-const openDatabase = () => {
-  db.primary.open({ compression: false }, err => {
-    if (err) {
-      logger.error("Error opening primary RocksDb database" + err);
-    }
-  });
-  db.secondary.open({ compression: false }, err => {
-    if (err) {
-      logger.error("Error opening secondary RocksDb database", err);
-    }
+const init = () => {
+  Object.values(db).map(partition => {
+    partition.open({ compression: false }, err => {
+      if (err) { logger.error("Error opening RocksDB" + err); }
+    });
   });
   return db;
 };
 
 module.exports = {
-  openDatabase,
+  init,
   db
 };

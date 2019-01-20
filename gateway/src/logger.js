@@ -1,9 +1,7 @@
 const { createLogger, format, transports } = require("winston");
 const morgan = require("morgan");
 
-//
 // Custom logging levels: https://github.com/winstonjs/winston/tree/master/examples
-//
 const config = {
   levels: {
     error: 0,

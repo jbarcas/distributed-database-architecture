@@ -12,10 +12,16 @@ const DB_PORT = process.env.DB_PORT || 8081;
  * to each of the nodes.
  */
 const getRequests = () => {
-  requests = [];
+  let requests = {
+    count: [],
+    list: []
+  };
   for (let i = 0; i < DB_N; i++) {
-    const request = axios.get(`http://db-${i}:${DB_PORT}/api/users/count`);
-    requests.push(request);
+    const url = `http://db-${i}:${DB_PORT}/api/users/`;
+    const countRequest = axios.get(url.concat("count"));
+    const listRequest = axios.get(url);
+    requests.count.push(countRequest);
+    requests.list.push(listRequest);
   }
   return requests;
 };
@@ -103,7 +109,7 @@ const users = {
    */
   count: () =>
     axios
-      .all(getRequests())
+      .all(getRequests().count)
       .then(
         axios.spread((...responses) => {
           let count = 0;
@@ -111,6 +117,23 @@ const users = {
             count += response.data.count;
           }
           return count;
+        })
+      )
+      .catch(err => {
+        logger.error(err.message);
+        throw new UnavailableProcessError();
+      }),
+
+  list: (offset, limit) =>
+    axios
+      .all(getRequests().list)
+      .then(
+        axios.spread((...responses) => {
+          // array of users data of each node
+          const usersData = responses.map(x => x.data);
+          // merge previous arrays into a single array
+          const users = [].concat.apply([], usersData);
+          return users.slice(offset).slice(0, limit);
         })
       )
       .catch(err => {

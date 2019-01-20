@@ -20,6 +20,18 @@ router.get("/:userId", (req, res) => {
     .catch(err => res.status(err.status).json({ message: err.message }));
 });
 
+router.get("/", (req, res) => {
+  const offset = req.query.offset ? req.query.offset : 0;
+  let limit = 10;
+  if ("limit" in req.query && req.query.limit > 0 && req.query.limit < 100) {
+    limit = req.query.limit;
+  }
+  db.users
+    .list(offset, limit)
+    .then(users => res.status(200).json(users))
+    .catch(err => res.status(err.status).json({ message: err.message }));
+});
+
 router.post("/", (req, res) => {
   const user = { id: shortid.generate(), ...req.body };
 

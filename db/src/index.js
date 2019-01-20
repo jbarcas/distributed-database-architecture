@@ -1,8 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const logger = require("./logger");
-const user = require("./routes/user");
-const rocksdbUtils = require("./utils/rocksdbUtils");
+const users = require("./routes/users");
+const rocksdb = require("./utils/rocksdb");
 
 // Initialize Express
 const app = express();
@@ -13,11 +13,11 @@ app.use(logger.expressMiddleware);
 // Parse incoming request bodies
 app.use(bodyParser.json());
 
-// Create RocksDB partitions
-rocksdbUtils.openDatabase();
+// Init RocksDB with its partitions
+rocksdb.init();
 
 // Route definitions
-app.use("/api/users", user);
+app.use("/api/users", users);
 
 // Error handling
 app.use((error, req, res, next) => {

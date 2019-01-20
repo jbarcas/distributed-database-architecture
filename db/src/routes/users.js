@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 const { exec } = require("child_process");
 const logger = require("../logger");
-const { db } = require("../utils/rocksdbUtils");
+const { db } = require("../utils/rocksdb");
 
 const router = express.Router();
 
@@ -10,16 +10,24 @@ const getRocksdb = value =>
   value.toLowerCase() === "primary" ? db.primary : db.secondary;
 
 router.get("/count", (req, res) => {
-  exec(
-    path.join(__dirname, "..", "scripts", "count.sh"),
-    (err, stdout, stderr) => {
-      if (err) {
-        logger.error(err);
-        return;
-      }
-      res.status(200).json({ count: parseInt(stdout) });
+  exec(path.join(__dirname, "..", "scripts", "count.sh"), (err, count) => {
+    if (err) {
+      logger.error(err);
+      return;
     }
-  );
+    res.status(200).json({ count: parseInt(count) });
+  });
+});
+
+router.get("/", (req, res) => {
+  exec(path.join(__dirname, "..", "scripts", "list.sh"), (err, stdout) => {
+    if (err) {
+      logger.error(err);
+      return;
+    }
+    const users = `[${stdout.trim()}]`;
+    res.status(200).json(JSON.parse(users));
+  });
 });
 
 router.get("/:userId", (req, res) => {
