@@ -9,21 +9,33 @@ const router = express.Router();
 const getRocksdb = value =>
   value.toLowerCase() === "primary" ? db.primary : db.secondary;
 
+const handleGetError = (err, res, errMessage) => {
+  const error = err.toString();
+  if (error === "Error: NotFound: ") {
+    logger.error(`${errMessage}: ${err}`);
+    res.status(404).json({ error });
+  } else {
+    res.status(500).json({ error });
+  }
+};
+
 router.get("/count", (req, res) => {
-  exec(path.join(__dirname, "..", "scripts", "count.sh"), (err, count) => {
+  const countScript = path.join(__dirname, "..", "scripts", "count.sh");
+  exec(countScript, (err, count) => {
     if (err) {
       logger.error(err);
-      return;
+      res.status(500).json({ message: "Error at executing script for COUNT operation" });
     }
     res.status(200).json({ count: parseInt(count) });
   });
 });
 
 router.get("/", (req, res) => {
-  exec(path.join(__dirname, "..", "scripts", "list.sh"), (err, stdout) => {
+  const listScript = path.join(__dirname, "..", "scripts", "list.sh");
+  exec(listScript, (err, stdout) => {
     if (err) {
       logger.error(err);
-      return;
+      res.status(500).json({ message: "Error at executing script for LIST operation" });
     }
     const users = `[${stdout.trim()}]`;
     res.status(200).json(JSON.parse(users));
@@ -32,11 +44,10 @@ router.get("/", (req, res) => {
 
 router.get("/:userId", (req, res) => {
   const userId = req.params.userId;
-  rocksdb = getRocksdb(req.query.db);
+  const rocksdb = getRocksdb(req.query.db);
   rocksdb.get(userId, (err, user) => {
     if (err) {
-      logger.error(`RocksDB: error while reading user ${userId}: ${err}`);
-      res.status(404).json({ error: err.toString() });
+      handleGetError(err, res, `RocksDB: error while reading user ${userId}`);
     } else {
       logger.info(`RocksDB: user ${userId} read successfully`);
       res.status(200).json(JSON.parse(user));
@@ -46,25 +57,23 @@ router.get("/:userId", (req, res) => {
 
 router.post("/", (req, res) => {
   const user = req.body;
-  rocksdb = getRocksdb(req.query.db);
+  const rocksdb = getRocksdb(req.query.db);
   rocksdb.put(user.id, Buffer.from(JSON.stringify(user)), err => {
     if (err) {
       logger.error(`RocksDB: error while creating user: ${err}`);
       res.status(404).json({ error: err.toString() });
-    } else {
-      logger.info(`RocksDB: user ${user.id} created successfully`);
-      res.status(201).json(user);
     }
+    logger.info(`RocksDB: user ${user.id} created successfully`);
+    res.status(201).json(user);
   });
 });
 
 router.put("/", (req, res) => {
-  const user = req.body;
-  rocksdb = getRocksdb(req.query.db);
-  rocksdb.get(user.id, (err, user) => {
+  const userId = req.body.id;
+  const rocksdb = getRocksdb(req.query.db);
+  rocksdb.get(userId, (err, user) => {
     if (err) {
-      logger.error(`RocksDB: error at updating, user does not exist: ${err}`);
-      res.status(404).json({ error: err.toString() });
+      handleGetError(err, res,`RocksDB: error at updating, user ${userId} does not exist`);
     } else {
       rocksdb.put(
         JSON.parse(user).id,
@@ -74,9 +83,7 @@ router.put("/", (req, res) => {
             logger.error(`RocksDB: error while updating user: ${err}`);
             res.status(400).json({ error: err.toString() });
           } else {
-            logger.info(
-              `RocksDB: user ${JSON.parse(user).id} updated successfully`
-            );
+            logger.info(`RocksDB: user ${JSON.parse(user).id} updated successfully`);
             res.status(200).json(req.body);
           }
         }
@@ -87,20 +94,18 @@ router.put("/", (req, res) => {
 
 router.delete("/:userId", (req, res) => {
   const userId = req.params.userId;
-  rocksdb = getRocksdb(req.query.db);
+  const rocksdb = getRocksdb(req.query.db);
   rocksdb.get(userId, (err, user) => {
     if (err) {
-      logger.error(`RocksDB: error at deleting, user does not exist: ${err}`);
-      res.status(404).json({ error: err.toString() });
+      handleGetError(err, res, `RocksDB: error at deleting, user ${userId} does not exist`);
     } else {
       rocksdb.del(userId, err => {
         if (err) {
           logger.error(`RocksDB: error while deleting user: ${err}`);
           res.status(404).json({ error: err.toString() });
-        } else {
-          logger.info(`RocksDB: user ${userId} deleted successfully`);
-          res.status(204).send();
         }
+        logger.info(`RocksDB: user ${userId} deleted successfully`);
+        res.status(204).send();
       });
     }
   });

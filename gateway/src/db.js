@@ -8,8 +8,7 @@ const DB_N = process.env.DB_N || 3;
 const DB_PORT = process.env.DB_PORT || 8081;
 
 /**
- * Generates an array of requests necessary to query the number of entities
- * to each of the nodes.
+ * Generates an array of requests necessary to "count" and "list" operations
  */
 const getRequests = () => {
   let requests = {
@@ -63,7 +62,7 @@ const users = {
     axios
       .get(processUtils.getPrimaryEndpoint(userId))
       .then(user => user.data)
-      .catch(err =>
+      .catch(() =>
         axios
           .get(processUtils.getSecondaryEndpoint(userId))
           .then(user => user.data)
@@ -111,13 +110,9 @@ const users = {
     axios
       .all(getRequests().count)
       .then(
-        axios.spread((...responses) => {
-          let count = 0;
-          for (const response of responses) {
-            count += response.data.count;
-          }
-          return count;
-        })
+        axios.spread((...responses) =>
+          responses.reduce((anterior, actual) => anterior + actual.data.count, 0)
+        )
       )
       .catch(err => {
         logger.error(err.message);

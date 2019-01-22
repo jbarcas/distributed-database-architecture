@@ -1,6 +1,6 @@
 const express = require("express");
 const shortid = require("shortid");
-const userUtils = require("../utils/userUtils");
+const userValidator = require("../utils/userValidator");
 const db = require("../db");
 
 const router = express.Router();
@@ -21,7 +21,7 @@ router.get("/:userId", (req, res) => {
 });
 
 router.get("/", (req, res) => {
-  const offset = req.query.offset ? req.query.offset : 0;
+  const offset = req.query.offset || 0;
   let limit = 10;
   if ("limit" in req.query && req.query.limit > 0 && req.query.limit < 100) {
     limit = req.query.limit;
@@ -34,9 +34,7 @@ router.get("/", (req, res) => {
 
 router.post("/", (req, res) => {
   const user = { id: shortid.generate(), ...req.body };
-
-  // validate input
-  userUtils.validateUserSchema(user);
+  userValidator.validate(user);
 
   // Insert the user in 2 db processes
   db.users
@@ -46,11 +44,10 @@ router.post("/", (req, res) => {
 });
 
 router.put("/", (req, res) => {
-  // validate input
-  userUtils.validateUserSchema(req.body);
+  const user = req.body;
+  userValidator.validate(user);
 
   // Update the user in 2 db processes
-  const user = req.body;
   db.users
     .update(user)
     .then(user => res.status(200).json(user))

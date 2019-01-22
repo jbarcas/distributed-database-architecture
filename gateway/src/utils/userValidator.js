@@ -8,7 +8,7 @@ const userSchema = joi.object().keys({
   group: joi.number().integer().required()
 });
 
-const validateUserSchema = user => {
+const validate = user => {
   const validateUser = joi.validate(user, userSchema);
   if (validateUser.error) {
     throw new InvalidRequestError(`Malformed payload: ${validateUser.error}`);
@@ -16,5 +16,5 @@ const validateUserSchema = user => {
 };
 
 module.exports = {
-  validateUserSchema
+  validate
 };
