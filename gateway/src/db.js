@@ -111,7 +111,7 @@ const users = {
       .all(getRequests().count)
       .then(
         axios.spread((...responses) =>
-          responses.reduce((anterior, actual) => anterior + actual.data.count, 0)
+          responses.reduce((previous, current) => previous + current.data.count, 0)
         )
       )
       .catch(err => {
